@@ -22,6 +22,8 @@ const bgmPlayer = document.getElementById("bgm-player");
 
 let selectedAnswer = null;
 let questionResolved = false;
+let questionConsecutiveTimeouts = 0;
+let round4CutscenePlayed = false;
 let timerId = null;
 let timeRemaining = 20;
 let audioContext = null;
@@ -405,6 +407,7 @@ function resetTeams() {
   gameState.turnIndex = 0;
   gameState.isTieBreak = false;
   gameState.tieBreakIndex = 0;
+  round4CutscenePlayed = false;
   renderFactionCards();
   updateCommandPanel();
   playCue("gong");
@@ -449,10 +452,39 @@ function renderScoreRail() {
   }).join("");
 }
 
+function updateQuestionTeamDisplay(withPulse = false) {
+  const team = gameState.teams[gameState.activeTeamIndex];
+  const badge = document.getElementById("turn-team-badge");
+  document.getElementById("question-team-icon").textContent = team.icon;
+  document.getElementById("question-team-name").textContent = `${team.faction} · ${team.name}`;
+  badge.style.setProperty("--team-color", team.color);
+
+  if (withPulse) {
+    badge.classList.remove("pulse-team");
+    void badge.offsetWidth;
+    badge.classList.add("pulse-team");
+  }
+
+  renderScoreRail();
+}
+
 function renderQuestion() {
   stopTimer();
   selectedAnswer = null;
   questionResolved = false;
+  questionConsecutiveTimeouts = 0;
+
+  // Ẩn khung giải thích sử liệu trực tiếp nếu có
+  const expEl = document.getElementById("question-explanation");
+  if (expEl) expEl.hidden = true;
+
+  // Đặt lại nút xác nhận đáp án
+  const confirmBtn = document.getElementById("confirm-answer");
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.classList.remove("button--next-ready");
+    confirmBtn.innerHTML = `<span>XÁC NHẬN ĐÁP ÁN</span><b>✓</b>`;
+  }
 
   let currentQuestion = null;
   const tieBadge = document.getElementById("tie-break-badge");
@@ -461,7 +493,6 @@ function renderQuestion() {
     tieBadge.hidden = false;
     currentQuestion = TIE_BREAKER_QUESTIONS[gameState.tieBreakIndex % TIE_BREAKER_QUESTIONS.length];
     document.getElementById("round-label").textContent = "VÒNG PHÂN ĐỊNH HẠNG NHẤT";
-    document.getElementById("question-count").textContent = `CÂU PHỤ ${gameState.tieBreakIndex + 1}`;
     document.getElementById("question-points-pill").textContent = `+${currentQuestion.points} ĐIỂM`;
   } else {
     tieBadge.hidden = true;
@@ -470,18 +501,25 @@ function renderQuestion() {
     }
     currentQuestion = QUESTIONS[gameState.turnIndex];
     document.getElementById("round-label").textContent = `VÒNG ${currentQuestion.round} — ${ROUND_NAMES[currentQuestion.round - 1]}`;
-    document.getElementById("question-count").textContent = `CÂU ${gameState.turnIndex + 1} / ${QUESTIONS.length}`;
     document.getElementById("question-points-pill").textContent = `+${currentQuestion.points} ĐIỂM`;
   }
 
-  const team = gameState.teams[gameState.activeTeamIndex];
-  document.getElementById("question-team-icon").textContent = team.icon;
-  document.getElementById("question-team-name").textContent = `${team.faction} · ${team.name}`;
-  document.getElementById("turn-team-badge").style.setProperty("--team-color", team.color);
+  updateQuestionTeamDisplay(false);
+
+  // Hiệu ứng lửa quanh viền thẻ câu hỏi từ Vòng 4 trở đi
+  const isRound4 = (!gameState.isTieBreak && currentQuestion.round === 4);
+  const isRound4OrMore = isRound4 || gameState.isTieBreak;
+  const questionCard = document.querySelector(".question-card");
+  if (questionCard) {
+    questionCard.classList.toggle("fire-border", isRound4OrMore);
+    const kickerEl = questionCard.querySelector(".question-kicker");
+    if (kickerEl) {
+      kickerEl.textContent = isRound4OrMore ? "🔥 QUÂN LỆNH QUYẾT CHIẾN" : "QUÂN LỆNH CHIẾN TRƯỜNG";
+    }
+  }
 
   document.getElementById("question-text").textContent = currentQuestion.question;
   document.getElementById("selection-note").textContent = `Độ khó: ${currentQuestion.difficulty} · Bấm chọn hoặc dùng phím A, B, C, D`;
-  document.getElementById("confirm-answer").disabled = true;
 
   const answerList = document.getElementById("answer-list");
   answerList.innerHTML = currentQuestion.answers.map((answer, index) => `
@@ -495,15 +533,80 @@ function renderQuestion() {
     btn.addEventListener("click", () => selectAnswer(Number(btn.dataset.answerIndex)));
   });
 
-  renderScoreRail();
+  // Khi bắt đầu sang Vòng 4 lần đầu tiên: phát hoạt cảnh video MP4 với hiệu ứng mực loang
+  if (isRound4 && !round4CutscenePlayed) {
+    round4CutscenePlayed = true;
+    playRound4Cutscene(() => {
+      startTimer();
+    });
+    return;
+  }
+
   startTimer();
+}
+
+/* ==========================================================
+   HOẠT CẢNH VÒNG 4: VUA QUANG TRUNG (HIỆU ỨNG MỰC LOANG)
+   ========================================================== */
+function playRound4Cutscene(onFinish) {
+  const overlay = document.getElementById("round4-cutscene-overlay");
+  const video = document.getElementById("cutscene-video");
+  if (!overlay || !video) {
+    if (onFinish) onFinish();
+    return;
+  }
+
+  // Tạm dừng nhạc nền để tập trung âm thanh hào hùng của video
+  pauseBgm();
+  playCue("gong");
+
+  overlay.hidden = false;
+  window.requestAnimationFrame(() => {
+    overlay.classList.add("is-active");
+  });
+
+  video.currentTime = 0;
+  const playPromise = video.play();
+  if (playPromise !== undefined) {
+    playPromise.catch((err) => {
+      console.warn("Video playback note:", err);
+    });
+  }
+
+  let isClosed = false;
+  const closeCutscene = () => {
+    if (isClosed) return;
+    isClosed = true;
+
+    video.pause();
+    overlay.classList.remove("is-active");
+    window.setTimeout(() => {
+      overlay.hidden = true;
+      if (bgmEnabled) {
+        playBgm(0.25);
+      }
+      playCue("drum");
+      if (onFinish) onFinish();
+    }, 1900);
+  };
+
+  video.onended = closeCutscene;
+
+  const skipBtn = document.getElementById("skip-cutscene");
+  if (skipBtn) {
+    skipBtn.onclick = closeCutscene;
+  }
 }
 
 function selectAnswer(index) {
   if (questionResolved) return;
+  const targetBtn = document.querySelector(`.answer-button[data-answer-index="${index}"]`);
+  if (!targetBtn || targetBtn.disabled || targetBtn.classList.contains("is-wrong-reveal")) return;
+
   selectedAnswer = index;
 
   document.querySelectorAll(".answer-button").forEach((btn) => {
+    if (btn.classList.contains("is-wrong-reveal")) return;
     const isSelected = Number(btn.dataset.answerIndex) === index;
     btn.classList.toggle("is-selected", isSelected);
     btn.setAttribute("aria-checked", String(isSelected));
@@ -552,51 +655,175 @@ function stopTimer() {
 
 function resolveQuestion(timedOut = false) {
   if (questionResolved) return;
-  questionResolved = true;
-  stopTimer();
 
   const currentQuestion = gameState.isTieBreak
     ? TIE_BREAKER_QUESTIONS[gameState.tieBreakIndex % TIE_BREAKER_QUESTIONS.length]
     : QUESTIONS[gameState.turnIndex];
 
-  const team = gameState.teams[gameState.activeTeamIndex];
-  const isCorrect = !timedOut && selectedAnswer === currentQuestion.correctAnswer;
+  const currentTeam = gameState.teams[gameState.activeTeamIndex];
+  const confirmBtn = document.getElementById("confirm-answer");
 
-  // Đánh dấu thị giác đáp án đúng / sai
-  document.querySelectorAll(".answer-button").forEach((btn) => {
-    const idx = Number(btn.dataset.answerIndex);
-    btn.disabled = true;
-    if (idx === currentQuestion.correctAnswer) {
-      btn.classList.add("is-correct-reveal");
-    } else if (idx === selectedAnswer && !isCorrect) {
-      btn.classList.add("is-wrong-reveal");
+  // TRƯỜNG HỢP 1: HẾT GIỜ (TIMED OUT)
+  if (timedOut) {
+    playCue("wrong");
+    questionConsecutiveTimeouts += 1;
+
+    // Hủy chọn phương án đang chọn dở
+    if (selectedAnswer !== null) {
+      document.querySelectorAll(".answer-button").forEach((btn) => {
+        if (!btn.classList.contains("is-wrong-reveal")) {
+          btn.classList.remove("is-selected");
+          btn.setAttribute("aria-checked", "false");
+        }
+      });
+      selectedAnswer = null;
     }
-  });
+    confirmBtn.disabled = true;
 
-  if (isCorrect) {
-    team.score += currentQuestion.points;
-    team.correctCount += 1;
+    // Nếu tất cả các phe đều lần lượt hết thời gian trên câu này
+    if (questionConsecutiveTimeouts >= gameState.teams.length) {
+      stopTimer();
+      questionResolved = true;
+
+      // Đổi đáp án đúng sang màu xanh
+      const correctBtn = document.querySelector(`.answer-button[data-answer-index="${currentQuestion.correctAnswer}"]`);
+      if (correctBtn) correctBtn.classList.add("is-correct-reveal");
+
+      document.querySelectorAll(".answer-button").forEach((btn) => (btn.disabled = true));
+
+      document.getElementById("selection-note").innerHTML = `<span style="color:#f87171;font-weight:700;">Hết thời gian cho tất cả các phe!</span> Đáp án đúng: <strong>[${ANSWER_KEYS[currentQuestion.correctAnswer]}]. ${escapeHtml(currentQuestion.answers[currentQuestion.correctAnswer])}</strong>.`;
+
+      const expEl = document.getElementById("question-explanation");
+      const expText = document.getElementById("question-explanation-text");
+      if (expEl && expText) {
+        expText.textContent = currentQuestion.explanation;
+        expEl.hidden = false;
+      }
+
+      const nextBtnText = (gameState.turnIndex === QUESTIONS.length - 1 && !gameState.isTieBreak)
+        ? "TỔNG KẾT CHIẾN DỊCH"
+        : "CÂU TIẾP THEO";
+      confirmBtn.innerHTML = `<span>${nextBtnText}</span><b>→</b>`;
+      confirmBtn.classList.add("button--next-ready");
+      confirmBtn.disabled = false;
+      return;
+    }
+
+    // Chuyển lượt sang đội kế tiếp nhưng tiếp tục câu hỏi đó
+    const prevTeam = currentTeam;
+    gameState.activeTeamIndex = (gameState.activeTeamIndex + 1) % gameState.teams.length;
+    const nextTeam = gameState.teams[gameState.activeTeamIndex];
+    updateQuestionTeamDisplay(true);
+
+    document.getElementById("selection-note").innerHTML = `<span style="color:#f87171;font-weight:700;">⏰ ${prevTeam.name} hết thời gian!</span> Lượt trả lời chuyển sang <strong>${nextTeam.faction} · ${nextTeam.name}</strong>.`;
+
+    startTimer();
+    return;
   }
 
-  playCue(isCorrect ? "correct" : "wrong");
-  renderScoreRail();
-  renderFactionCards();
+  // Nếu người dùng nhấn nhưng chưa chọn phương án
+  if (selectedAnswer === null) return;
 
-  // Hiển thị hộp thoại kết quả và kiến thức lịch sử
-  const statusEl = document.getElementById("result-status");
-  statusEl.textContent = isCorrect ? "CHÍNH XÁC – QUÂN LỆNH HOÀN THÀNH" : timedOut ? "HẾT THỜI GIAN QUÂN LỆNH" : "CHƯA CHÍNH XÁC";
-  statusEl.classList.toggle("is-wrong", !isCorrect);
+  questionConsecutiveTimeouts = 0;
+  const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
+  const chosenBtn = document.querySelector(`.answer-button[data-answer-index="${selectedAnswer}"]`);
 
-  document.getElementById("result-title").textContent = isCorrect ? `CHIẾN CÔNG +${currentQuestion.points}` : "KHÔNG CÓ CHIẾN CÔNG";
-  document.getElementById("result-answer").textContent = `Đáp án chính xác: ${ANSWER_KEYS[currentQuestion.correctAnswer]}. ${currentQuestion.answers[currentQuestion.correctAnswer]}`;
-  document.getElementById("result-explanation").textContent = currentQuestion.explanation;
+  // TRƯỜNG HỢP 2: TRẢ LỜI ĐÚNG
+  if (isCorrect) {
+    stopTimer();
+    questionResolved = true;
 
-  const nextBtnText = (gameState.turnIndex === QUESTIONS.length - 1 && !gameState.isTieBreak)
-    ? "TỔNG KẾT CHIẾN DỊCH (ENTER)"
-    : "TIẾP TỤC (ENTER)";
-  document.getElementById("next-turn").querySelector("span").textContent = nextBtnText;
+    // Đáp án đúng CHỈ CẦN CHUYỂN SANG MÀU XANH
+    if (chosenBtn) {
+      chosenBtn.classList.remove("is-selected");
+      chosenBtn.classList.add("is-correct-reveal");
+    }
 
-  resultModal.showModal();
+    // Khóa tất cả các nút đáp án
+    document.querySelectorAll(".answer-button").forEach((btn) => {
+      btn.disabled = true;
+    });
+
+    // Cộng điểm cho phe hiện tại
+    currentTeam.score += currentQuestion.points;
+    currentTeam.correctCount += 1;
+    playCue("correct");
+    renderScoreRail();
+    renderFactionCards();
+
+    // Thông báo chúc mừng
+    document.getElementById("selection-note").innerHTML = `<span style="color:#4ade80;font-weight:800;">✓ CHÍNH XÁC!</span> <strong>${currentTeam.faction} · ${currentTeam.name}</strong> xuất sắc giành trọn <strong>+${currentQuestion.points} điểm</strong>!`;
+
+    // Hiển thị khung giải thích sử liệu trực tiếp trên màn hình
+    const expEl = document.getElementById("question-explanation");
+    const expText = document.getElementById("question-explanation-text");
+    if (expEl && expText) {
+      expText.textContent = currentQuestion.explanation;
+      expEl.hidden = false;
+    }
+
+    // Nút xác nhận chuyển thành nút Câu tiếp theo (phím Enter)
+    const nextBtnText = (gameState.turnIndex === QUESTIONS.length - 1 && !gameState.isTieBreak)
+      ? "TỔNG KẾT CHIẾN DỊCH"
+      : "CÂU TIẾP THEO";
+    confirmBtn.innerHTML = `<span>${nextBtnText}</span><b>→</b>`;
+    confirmBtn.classList.add("button--next-ready");
+    confirmBtn.disabled = false;
+    return;
+  }
+
+  // TRƯỜNG HỢP 3: CHỌN ĐÁP ÁN SAI
+  // Đáp án đó chuyển sang màu đỏ và bị loại
+  if (chosenBtn) {
+    chosenBtn.classList.remove("is-selected");
+    chosenBtn.classList.add("is-wrong-reveal");
+    chosenBtn.disabled = true;
+  }
+
+  playCue("wrong");
+  selectedAnswer = null;
+  confirmBtn.disabled = true;
+
+  // Kiểm tra số phương án còn lại chưa bị chọn sai
+  const remainingButtons = document.querySelectorAll(".answer-button:not(.is-wrong-reveal)");
+  if (remainingButtons.length <= 1) {
+    // Chỉ còn lại duy nhất phương án đúng (cả 3 phương án sai đã bị loại)
+    stopTimer();
+    questionResolved = true;
+
+    const correctBtn = document.querySelector(`.answer-button[data-answer-index="${currentQuestion.correctAnswer}"]`);
+    if (correctBtn) correctBtn.classList.add("is-correct-reveal");
+
+    document.querySelectorAll(".answer-button").forEach((btn) => (btn.disabled = true));
+
+    document.getElementById("selection-note").innerHTML = `<span style="color:#f87171;font-weight:700;">Tất cả phương án sai đã bị loại!</span> Đáp án đúng: <strong>[${ANSWER_KEYS[currentQuestion.correctAnswer]}]. ${escapeHtml(currentQuestion.answers[currentQuestion.correctAnswer])}</strong>.`;
+
+    const expEl = document.getElementById("question-explanation");
+    const expText = document.getElementById("question-explanation-text");
+    if (expEl && expText) {
+      expText.textContent = currentQuestion.explanation;
+      expEl.hidden = false;
+    }
+
+    const nextBtnText = (gameState.turnIndex === QUESTIONS.length - 1 && !gameState.isTieBreak)
+      ? "TỔNG KẾT CHIẾN DỊCH"
+      : "CÂU TIẾP THEO";
+    confirmBtn.innerHTML = `<span>${nextBtnText}</span><b>→</b>`;
+    confirmBtn.classList.add("button--next-ready");
+    confirmBtn.disabled = false;
+    return;
+  }
+
+  // Chuyển sang đội kế tiếp nhưng tiếp tục câu hỏi đó
+  const prevTeam = currentTeam;
+  gameState.activeTeamIndex = (gameState.activeTeamIndex + 1) % gameState.teams.length;
+  const nextTeam = gameState.teams[gameState.activeTeamIndex];
+  updateQuestionTeamDisplay(true);
+
+  document.getElementById("selection-note").innerHTML = `<span style="color:#f87171;font-weight:700;">✗ ${prevTeam.name} chọn sai!</span> Lượt trả lời chuyển sang <strong>${nextTeam.faction} · ${nextTeam.name}</strong>. Mời chọn phương án còn lại!`;
+
+  // Khởi động lại đồng hồ 20s cho đội kế tiếp
+  startTimer();
 }
 
 function advanceTurn() {
@@ -632,9 +859,8 @@ function advanceTurn() {
     return checkFinalOutcome();
   }
 
-  // Phe thi tiếp theo = (Phe được chọn ban đầu + Lượt hiện tại) % 3
-  const cycle = gameState.turnIndex % gameState.teams.length;
-  gameState.activeTeamIndex = (gameState.selectedStartTeamIndex + cycle) % gameState.teams.length;
+  // Luôn chuyển sang phe kế tiếp của phe vừa hoàn thành câu hỏi (tránh 1 phe trả lời 2 câu liên tiếp)
+  gameState.activeTeamIndex = (gameState.activeTeamIndex + 1) % gameState.teams.length;
 
   renderQuestion();
 }
@@ -683,6 +909,7 @@ function getRankedTeams() {
 
 function finishQuiz() {
   stopTimer();
+  document.querySelector(".question-card")?.classList.remove("fire-border");
   renderRanking();
   showScreen("ranking");
   playCue("gong");
@@ -729,6 +956,7 @@ function startQuiz() {
   gameState.isTieBreak = false;
   gameState.tieBreakIndex = 0;
   gameState.activeTeamIndex = gameState.selectedStartTeamIndex;
+  round4CutscenePlayed = false;
 
   renderFactionCards();
   showScreen("question");
@@ -781,8 +1009,26 @@ function setupKeyboardShortcuts() {
       return;
     }
 
+    // Phím Esc đóng hoạt cảnh hoặc modal
+    if (e.key === "Escape") {
+      const cutsceneOverlay = document.getElementById("round4-cutscene-overlay");
+      if (cutsceneOverlay && !cutsceneOverlay.hidden) {
+        e.preventDefault();
+        const skipBtn = document.getElementById("skip-cutscene");
+        if (skipBtn) skipBtn.click();
+        return;
+      }
+    }
+
     // Phím Enter hoặc Space
     if (e.key === "Enter" || e.key === " ") {
+      const cutsceneOverlay = document.getElementById("round4-cutscene-overlay");
+      if (cutsceneOverlay && !cutsceneOverlay.hidden) {
+        e.preventDefault();
+        const skipBtn = document.getElementById("skip-cutscene");
+        if (skipBtn) skipBtn.click();
+        return;
+      }
       if (resultModal.open) {
         e.preventDefault();
         advanceTurn();
@@ -800,10 +1046,15 @@ function setupKeyboardShortcuts() {
       }
       const activeScreen = document.querySelector(".screen--active");
       if (activeScreen && activeScreen.id === "screen-question") {
+        e.preventDefault();
+        if (questionResolved) {
+          advanceTurn();
+          return;
+        }
         const confirmBtn = document.getElementById("confirm-answer");
-        if (!confirmBtn.disabled && !questionResolved) {
-          e.preventDefault();
+        if (!confirmBtn.disabled) {
           resolveQuestion(false);
+          return;
         }
       }
       return;
@@ -819,8 +1070,11 @@ function setupKeyboardShortcuts() {
       else if (key === "D" || key === "4") mappedIndex = 3;
 
       if (mappedIndex >= 0 && mappedIndex < 4) {
-        e.preventDefault();
-        selectAnswer(mappedIndex);
+        const targetBtn = document.querySelector(`.answer-button[data-answer-index="${mappedIndex}"]`);
+        if (targetBtn && !targetBtn.disabled && !targetBtn.classList.contains("is-wrong-reveal")) {
+          e.preventDefault();
+          selectAnswer(mappedIndex);
+        }
       }
     }
   });
@@ -848,6 +1102,14 @@ document.getElementById("fullscreen-toggle").addEventListener("click", toggleFul
 
 document.getElementById("home-button").addEventListener("click", () => {
   stopTimer();
+  const video = document.getElementById("cutscene-video");
+  if (video) video.pause();
+  const overlay = document.getElementById("round4-cutscene-overlay");
+  if (overlay) {
+    overlay.classList.remove("is-active");
+    overlay.hidden = true;
+  }
+  document.querySelector(".question-card")?.classList.remove("fire-border");
   showScreen("intro");
   playCue("gong");
 });
@@ -858,7 +1120,13 @@ document.getElementById("continue-to-map").addEventListener("click", () => {
   showScreen("map");
 });
 
-document.getElementById("confirm-answer").addEventListener("click", () => resolveQuestion(false));
+document.getElementById("confirm-answer").addEventListener("click", () => {
+  if (questionResolved) {
+    advanceTurn();
+  } else {
+    resolveQuestion(false);
+  }
+});
 document.getElementById("next-turn").addEventListener("click", advanceTurn);
 document.getElementById("show-victory").addEventListener("click", showVictory);
 document.getElementById("ranking-home").addEventListener("click", () => {

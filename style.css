@@ -1007,6 +1007,15 @@ h1, h2, h3 {
   background: #140b07;
   border-radius: 6px;
   box-shadow: 0 0 20px color-mix(in srgb, var(--team-color), transparent 60%);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.turn-team-badge.pulse-team {
+  animation: pulseTeamChange 0.6s cubic-bezier(0.2, 0.8, 0.25, 1);
+}
+@keyframes pulseTeamChange {
+  0% { transform: scale(1); box-shadow: 0 0 0 rgba(222, 182, 110, 0); }
+  50% { transform: scale(1.08); box-shadow: 0 0 28px var(--team-color); }
+  100% { transform: scale(1); box-shadow: 0 0 20px color-mix(in srgb, var(--team-color), transparent 60%); }
 }
 .turn-team-badge span {
   color: var(--team-color);
@@ -1149,13 +1158,456 @@ h1, h2, h3 {
   transform: scale(1.01);
 }
 .answer-button.is-correct-reveal {
-  border-color: #4ade80 !important;
-  background: rgba(20, 80, 40, 0.6) !important;
-  box-shadow: 0 0 24px rgba(74, 222, 128, 0.5) !important;
+  border-color: #22c55e !important;
+  background: rgba(20, 90, 45, 0.75) !important;
+  box-shadow: 0 0 28px rgba(34, 197, 94, 0.6) !important;
+  transform: scale(1.02);
+  color: #f0fdf4 !important;
+}
+.answer-button.is-correct-reveal .answer-key {
+  border-color: #22c55e !important;
+  color: #86efac !important;
+  background: rgba(10, 50, 25, 0.9) !important;
 }
 .answer-button.is-wrong-reveal {
-  border-color: #f87171 !important;
-  background: rgba(90, 20, 20, 0.6) !important;
+  border-color: #ef4444 !important;
+  background: rgba(110, 20, 20, 0.55) !important;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.35) !important;
+  opacity: 0.6;
+  cursor: not-allowed !important;
+}
+.answer-button.is-wrong-reveal .answer-key {
+  border-color: #ef4444 !important;
+  color: #fca5a5 !important;
+  background: rgba(60, 10, 10, 0.8) !important;
+}
+.answer-button.is-wrong-reveal .answer-text {
+  text-decoration: line-through;
+  color: #fca5a5 !important;
+}
+
+/* KHUNG GIẢI THÍCH LỊCH SỬ TRỰC TIẾP */
+.question-explanation {
+  margin-top: 18px;
+  padding: 14px 20px;
+  border-radius: 6px;
+  border-left: 4px solid var(--gold);
+  background: rgba(28, 14, 7, 0.9);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+  animation: fadeInDown 0.35s ease;
+}
+.question-explanation[hidden] {
+  display: none !important;
+}
+.explanation-tag {
+  margin: 0 0 4px;
+  color: var(--gold-bright);
+  font-family: var(--font-serif);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.explanation-body {
+  margin: 0;
+  color: var(--cream);
+  font-size: clamp(0.82rem, 1vw, 0.96rem);
+  line-height: 1.6;
+}
+
+/* NÚT CHUYỂN CÂU TIẾP THEO NỔI BẬT */
+.button.button--next-ready {
+  background: linear-gradient(90deg, #15803d, #22c55e, #16a34a) !important;
+  border-color: #86efac !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 25px rgba(34, 197, 94, 0.6) !important;
+  animation: pulseNextReady 1.6s ease-in-out infinite alternate;
+}
+@keyframes pulseNextReady {
+  0% { transform: translateY(0); box-shadow: 0 0 15px rgba(34, 197, 94, 0.4); }
+  100% { transform: translateY(-2px); box-shadow: 0 0 30px rgba(34, 197, 94, 0.8); }
+}
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================
+   HIỆU ỨNG LỬA XUNG QUANH VIỀN CÂU HỎI (TỪ VÒNG 4 TRỞ ĐI)
+   ========================================================== */
+.question-card.fire-border {
+  position: relative;
+  border-color: #ff5722 !important;
+  box-shadow:
+    0 0 25px rgba(255, 69, 0, 0.75),
+    0 0 55px rgba(255, 140, 0, 0.45),
+    inset 0 0 40px rgba(255, 69, 0, 0.22),
+    0 20px 42px rgba(0, 0, 0, 0.85) !important;
+  animation: flameBorderGlow 2.5s ease-in-out infinite alternate;
+}
+
+/* Dải lửa chạy quanh viền thẻ */
+.question-card.fire-border::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 11px;
+  background: linear-gradient(60deg, #ff1744, #ff5722, #ffab00, #ff3d00, #ff9100, #ff1744);
+  background-size: 300% 300%;
+  z-index: -1;
+  animation: fireGradientRun 4s linear infinite;
+  filter: blur(2.5px);
+  pointer-events: none;
+}
+
+@keyframes fireGradientRun {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes flameBorderGlow {
+  0% {
+    box-shadow:
+      0 0 20px rgba(255, 60, 0, 0.7),
+      0 0 45px rgba(255, 120, 0, 0.4),
+      inset 0 0 30px rgba(255, 60, 0, 0.2),
+      0 20px 42px rgba(0, 0, 0, 0.85);
+    border-color: #ff5722;
+  }
+  100% {
+    box-shadow:
+      0 0 35px rgba(255, 80, 0, 0.95),
+      0 0 75px rgba(255, 160, 0, 0.65),
+      inset 0 0 50px rgba(255, 80, 0, 0.35),
+      0 20px 42px rgba(0, 0, 0, 0.85);
+    border-color: #ffab00;
+  }
+}
+
+/* Tàn lửa bốc cháy quanh thẻ câu hỏi từ Vòng 4 */
+.card-fire-embers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+  display: none;
+  z-index: 10;
+}
+
+.question-card.fire-border .card-fire-embers {
+  display: block;
+}
+
+.card-fire-embers i {
+  position: absolute;
+  bottom: -6px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ffe066;
+  box-shadow: 0 0 10px 2px #ff4500;
+  animation: cardEmberRise 3.5s cubic-bezier(0.2, 0.8, 0.3, 1) infinite;
+}
+
+.card-fire-embers i:nth-child(1) { left: 8%; animation-delay: 0s; animation-duration: 3.2s; }
+.card-fire-embers i:nth-child(2) { left: 22%; animation-delay: -1.2s; animation-duration: 4s; }
+.card-fire-embers i:nth-child(3) { left: 38%; animation-delay: -2.4s; animation-duration: 2.8s; }
+.card-fire-embers i:nth-child(4) { left: 55%; animation-delay: -0.6s; animation-duration: 3.6s; }
+.card-fire-embers i:nth-child(5) { left: 70%; animation-delay: -1.8s; animation-duration: 3.1s; }
+.card-fire-embers i:nth-child(6) { left: 85%; animation-delay: -2.9s; animation-duration: 4.2s; }
+.card-fire-embers i:nth-child(7) { left: 96%; animation-delay: -0.8s; animation-duration: 3s; }
+.card-fire-embers i:nth-child(8) { left: 4%; animation-delay: -1.5s; animation-duration: 3.8s; }
+
+@keyframes cardEmberRise {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.8;
+    transform: translateY(-80px) translateX(8px) scale(0.85);
+  }
+  100% {
+    transform: translateY(-160px) translateX(16px) scale(0.2);
+    opacity: 0;
+  }
+}
+
+.question-card.fire-border .question-kicker {
+  color: #ff9100 !important;
+  text-shadow: 0 0 10px rgba(255, 69, 0, 0.7);
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.question-card.fire-border .points-pill {
+  border-color: #ff5722 !important;
+  background: rgba(255, 69, 0, 0.28) !important;
+  color: #ffea00 !important;
+  box-shadow: 0 0 16px rgba(255, 69, 0, 0.6) !important;
+}
+
+/* ==========================================================
+   HOẠT CẢNH VÒNG 4: HIỆU ỨNG MỰC LOANG THỦY MẶC (INK SPLASH)
+   ========================================================== */
+.cutscene-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 5, 2, 0.96);
+  backdrop-filter: blur(12px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 1.8s cubic-bezier(0.16, 1, 0.3, 1), visibility 1.8s;
+}
+
+.cutscene-overlay.is-active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.cutscene-overlay[hidden] {
+  display: none !important;
+}
+
+.ink-splash-backdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: radial-gradient(circle at center, #261208 0%, #0d0603 65%, #050201 100%);
+}
+
+.ink-blot {
+  position: absolute;
+  background: #020101;
+  filter: blur(14px) contrast(180%);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.cutscene-overlay.is-active .ink-blot--1 {
+  top: 35%;
+  left: 40%;
+  width: 480px;
+  height: 480px;
+  animation: inkBlotBleed 4.4s cubic-bezier(0.1, 0.9, 0.2, 1) 0.2s forwards;
+}
+
+.cutscene-overlay.is-active .ink-blot--2 {
+  top: 15%;
+  left: 20%;
+  width: 340px;
+  height: 340px;
+  animation: inkBlotBleed 4.8s cubic-bezier(0.1, 0.9, 0.2, 1) 0.6s forwards;
+}
+
+.cutscene-overlay.is-active .ink-blot--3 {
+  bottom: 10%;
+  right: 25%;
+  width: 400px;
+  height: 400px;
+  animation: inkBlotBleed 5.2s cubic-bezier(0.1, 0.9, 0.2, 1) 0.45s forwards;
+}
+
+.cutscene-overlay.is-active .ink-blot--4 {
+  top: 50%;
+  right: 15%;
+  width: 300px;
+  height: 300px;
+  animation: inkBlotBleed 4.6s cubic-bezier(0.1, 0.9, 0.2, 1) 0.75s forwards;
+}
+
+.cutscene-overlay.is-active .ink-blot--5 {
+  bottom: 30%;
+  left: 10%;
+  width: 320px;
+  height: 320px;
+  animation: inkBlotBleed 5s cubic-bezier(0.1, 0.9, 0.2, 1) 0.9s forwards;
+}
+
+.ink-wash-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(222, 182, 110, 0.12) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+@keyframes inkBlotBleed {
+  0% {
+    transform: scale(0.08) rotate(0deg);
+    opacity: 0.95;
+    border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+  }
+  50% {
+    border-radius: 65% 35% 45% 55% / 30% 65% 35% 70%;
+  }
+  100% {
+    transform: scale(2.8) rotate(35deg);
+    opacity: 0.88;
+    border-radius: 50% 50% 40% 60% / 60% 40% 60% 40%;
+  }
+}
+
+.cutscene-container {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  text-align: center;
+}
+
+.cutscene-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 12;
+  padding: clamp(14px, 3vh, 30px) clamp(16px, 3vw, 56px) 64px;
+  background: linear-gradient(to bottom, rgba(5, 2, 1, 0.85) 0%, rgba(5, 2, 1, 0.35) 55%, transparent 100%);
+  animation: cutsceneTitleFade 2.2s ease-out 1s backwards;
+}
+
+.cutscene-eyebrow {
+  margin: 0 0 6px;
+  color: var(--gold);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.25em;
+  text-shadow: 0 0 10px rgba(222, 182, 110, 0.5);
+}
+
+.cutscene-title {
+  margin: 0;
+  color: var(--gold-bright);
+  font-family: var(--font-serif);
+  font-size: clamp(1.6rem, 3.4vw, 3rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9), 0 0 20px var(--gold-glow);
+}
+
+.cutscene-rule {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 8px;
+  color: var(--gold);
+}
+
+.cutscene-rule i {
+  width: 80px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+.cutscene-rule b {
+  font-size: 0.85rem;
+}
+
+.cutscene-video-wrapper {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.cutscene-video-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border: none;
+  border-radius: 0;
+  overflow: hidden;
+  background: #000;
+}
+
+.cutscene-overlay.is-active .cutscene-video-frame {
+  animation: inkFrameBloom 3.4s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards;
+}
+
+@keyframes inkFrameBloom {
+  0% {
+    clip-path: circle(0% at 50% 50%);
+    transform: scale(0.88);
+    filter: blur(14px) contrast(150%);
+    opacity: 0;
+  }
+  45% {
+    clip-path: circle(40% at 50% 50%);
+    filter: blur(4px) contrast(120%);
+    opacity: 0.9;
+  }
+  100% {
+    clip-path: circle(100% at 50% 50%);
+    transform: scale(1);
+    filter: blur(0) contrast(100%);
+    opacity: 1;
+  }
+}
+
+.cutscene-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ink-vignette-mask {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 45px rgba(12, 6, 3, 0.85), inset 0 0 90px rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 217, 118, 0.3);
+}
+
+.cutscene-actions {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 12;
+  padding: 64px clamp(16px, 3vw, 56px) clamp(16px, 3vh, 30px);
+  background: linear-gradient(to top, rgba(5, 2, 1, 0.85) 0%, rgba(5, 2, 1, 0.35) 55%, transparent 100%);
+  animation: cutsceneTitleFade 2.2s ease-out 1.8s backwards;
+}
+
+.cutscene-enter-btn {
+  padding: 12px 32px !important;
+  font-size: 0.88rem !important;
+  background: linear-gradient(90deg, #c2410c, #ea580c, #f59e0b) !important;
+  border-color: #ffd976 !important;
+  color: #fff !important;
+  box-shadow: 0 0 25px rgba(234, 88, 12, 0.65), 0 4px 15px rgba(0, 0, 0, 0.5) !important;
+}
+
+.cutscene-enter-btn:hover {
+  background: linear-gradient(90deg, #dc2626, #f97316, #fbbf24) !important;
+  box-shadow: 0 0 35px rgba(249, 115, 22, 0.9) !important;
+  transform: translateY(-2px) scale(1.02);
+}
+
+@keyframes cutsceneTitleFade {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .answer-button:disabled {
   cursor: default;

@@ -396,8 +396,8 @@
         <div class="question-layout">
           <header class="round-bar">
             <div>
-              <p id="round-label">VÒNG 1 — KHỞI ĐỘNG</p>
-              <h2 id="question-count">CÂU 1 / 12</h2>
+              <p class="round-kicker">GIAI ĐOẠN CHIẾN DỊCH</p>
+              <h2 id="round-label">VÒNG 1 — KHỞI ĐỘNG</h2>
             </div>
             <div id="tie-break-badge" class="tie-break-badge" hidden>
               <span>⚔ PHÂN ĐỊNH HẠNG NHẤT</span>
@@ -420,12 +420,23 @@
 
             <!-- Chính giữa: Thẻ câu hỏi và các phương án -->
             <article class="question-card">
+              <!-- Hiệu ứng tàn lửa bốc cháy quanh viền từ Vòng 4 -->
+              <div class="card-fire-embers" aria-hidden="true">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              </div>
               <div class="card-header">
                 <span class="question-kicker">QUÂN LỆNH CHIẾN TRƯỜNG</span>
                 <span id="question-points-pill" class="points-pill">+100 ĐIỂM</span>
               </div>
               <h1 id="question-text">Đang triệu tập quân lệnh...</h1>
               <div id="answer-list" class="answer-list" role="radiogroup" aria-label="Bốn phương án trả lời"></div>
+
+              <!-- Khung giải thích lịch sử trực tiếp trên thẻ câu hỏi -->
+              <div id="question-explanation" class="question-explanation" hidden>
+                <p class="explanation-tag">✦ SỬ LIỆU CHIẾN DỊCH:</p>
+                <p id="question-explanation-text" class="explanation-body"></p>
+              </div>
+
               <div class="question-actions">
                 <p id="selection-note">Nhấp chọn phương án hoặc bấm phím A, B, C, D</p>
                 <button id="confirm-answer" class="button button--primary" type="button" disabled>
@@ -488,6 +499,42 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <!-- HOẠT CẢNH VÒNG 4: VUA QUANG TRUNG (HIỆU ỨNG MỰC LOANG THỦY MẶC) -->
+  <div id="round4-cutscene-overlay" class="cutscene-overlay" hidden>
+    <!-- Các đốm mực loang thủy mặc nghệ thuật -->
+    <div class="ink-splash-backdrop" aria-hidden="true">
+      <div class="ink-blot ink-blot--1"></div>
+      <div class="ink-blot ink-blot--2"></div>
+      <div class="ink-blot ink-blot--3"></div>
+      <div class="ink-blot ink-blot--4"></div>
+      <div class="ink-blot ink-blot--5"></div>
+      <div class="ink-wash-glow"></div>
+    </div>
+
+    <div class="cutscene-container">
+      <header class="cutscene-header">
+        <p class="cutscene-eyebrow"><span>✦</span> VÒNG 4: QUYẾT CHIẾN THẦN TỐC <span>✦</span></p>
+        <h2 class="cutscene-title">HÀO KHÍ QUANG TRUNG ĐẠI PHÁ QUÂN THANH</h2>
+        <div class="cutscene-rule"><i></i><b>⚔</b><i></i></div>
+      </header>
+
+      <div class="cutscene-video-wrapper">
+        <div class="cutscene-video-frame">
+          <video id="cutscene-video" class="cutscene-video" playsinline preload="auto">
+            <source src="assets/video/vua-quang-trung.mp4" type="video/mp4" />
+          </video>
+          <div class="ink-vignette-mask" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="cutscene-actions">
+        <button id="skip-cutscene" class="button button--primary cutscene-enter-btn" type="button">
+          <span>VÀO TRẬN QUYẾT CHIẾN (ENTER)</span><b>⚔</b>
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Dialog Tra cứu Sử liệu & Hướng dẫn -->
